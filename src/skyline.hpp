@@ -61,7 +61,7 @@ public:
         --m_ih[i];
       }
     }
-    auto sum = std::accumulate(m_ih.begin(), m_ih.end(), (size_t)0);
+    auto sum = std::accumulate(m_ih.begin(), m_ih.end(), (I)0);
     setsky();
     // Copy into the au/d array
     m_ad.resize(n);

@@ -157,6 +157,14 @@ template <typename I, typename R, template <typename ...> typename V> bool is_sy
   return true;
 }
 
+template <typename I, typename R, template <typename ...> typename V> void map_vector(V<R> &from, V<R> &to, V<I> map)
+{
+  I N = from.size();
+  for (I i = 0; i < N; ++i) {
+    to[map[i]] = from[i];
+  }
+}
+
 template <typename I, typename R, template <typename ...> typename V> struct UnitSquareGrid
 {
 
@@ -282,12 +290,12 @@ template <typename I, typename R, template <typename ...> typename V> struct Uni
     }
   }
 
-  bool matrix_system(V<V<R>> &M, V<I> &x_map, V<R> &b)
+  I matrix_system(V<V<R>> &M, V<I> &x_map, V<R> &b)
   {
     auto twod = TwoDimensionalCase<I>::diagnose(N, N, north_boundary_condition,
       east_boundary_condition, south_boundary_condition, west_boundary_condition);
     if (!twod) {
-      return false;
+      return 0;
     }
 
     std::cout << " Type: " << (int)(twod->type) << std::endl;
@@ -300,7 +308,9 @@ template <typename I, typename R, template <typename ...> typename V> struct Uni
     std::cout << "Shift: " << twod->nshift << std::endl;
     //TwoDimensionalCase<I> twod{opttwod.get()};
 
-    x_map.resize(twod->mi*twod->mj);
+    I N = twod->mi*twod->mj;
+
+    x_map.resize(N);
     I ij = twod->nstart;
     I mij = 0;
     for (I j = 0; j < twod->mj; ++j) {
@@ -315,10 +325,10 @@ template <typename I, typename R, template <typename ...> typename V> struct Uni
     // Initialize the matrix equations
     b.resize(twod->mi*twod->mj);
     M.resize(twod->mi*twod->mj);
-    for (I i = 0; i < twod->mi*twod->mj; ++i) {
+    for (I i = 0; i < N; ++i) {
       M[i].resize(twod->mi*twod->mj);
       b[i] = 0.0;
-      for (I j = 0; j < twod->mi*twod->mj; ++j) {
+      for (I j = 0; j < N; ++j) {
         M[i][j] = 0.0;
       }
     }
@@ -382,6 +392,8 @@ template <typename I, typename R, template <typename ...> typename V> struct Uni
         ++mij;
       }
     }
+
+    return N;
     /*
     I ni = N;
     I nj = N;
@@ -533,6 +545,83 @@ template <typename I, typename R, template <typename ...> typename V> struct Uni
 
 };
 
+/*****************************************************************************/
+/*                                                                           */
+/*   GEnxn - Do Gaussian elimination on a n by n system of equations.        */
+/*                                                                           */
+/*   Arguments:                                                              */
+/*      int_t n ------------ number of rows and columns.                     */
+/*      real_t A[][] ------- LHS matrix.                                     */
+/*      real_t x[] --------- solution vector.                                */
+/*      real_t b[] --------- RHS vector.                                     */
+/*      real_t *z ---------- real work vector at least n in length.          */
+/*      int_t *ip ---------- integer work vector at least n in length.       */
+/*                                                                           */
+/*   This routine does Gaussian Elimination on a nxn matrix with partial     */
+/*   pivoting.  It probably should be replaced with something better.  A is  */
+/*   modified and b is not.  It is a descendant of the F77 version, but is   */
+/*   way better because templating.                                          */
+/*                                                                           */
+/*****************************************************************************/
+template <typename I, typename R, template <typename ...> typename V> void GEnxn(I n, V<V<R>> &A, V<R> &x, V<R> &b,
+  V<R> &z, V<I> &ip)
+{
+  R lik, big;
+  I i, j, k, itemp;
+  /*
+    Initialize the setup and copy the RHS
+  */
+  for (j = 0; j < n; j++) {
+    ip[j] = j;
+    z[j] = b[j];
+  }
+  /*
+    Forward elimination
+  */
+  for (k = 0; k < n - 1; k++) {
+    big = std::abs(A[ip[k]][k]);
+    for (i = k + 1; i < n; i++) {
+      if (std::abs(A[ip[i]][k]) > big) {
+        itemp = ip[i];
+        ip[i] = ip[k];
+        ip[k] = itemp;
+      }
+    }
+    /* write(*,*)'Using row: ',ip(k) */
+    for (i = k + 1; i < n; i++) {
+      lik = A[ip[i]][k] / A[ip[k]][k];
+      for (j = k + 1; j < n; j++) {
+        A[ip[i]][j] = A[ip[i]][j] - lik * A[ip[k]][j];
+      }
+      z[ip[i]] = z[ip[i]] - lik * z[ip[k]];
+    }
+  }
+
+  /*      i=0
+c      call print3x3(A,i)
+c      write(*,*)(z(k),k=1,3)
+c      write(*,*)(ip(j),j=1,3)
+  */
+  /*
+    Back substitute, with tricky looping in case I is unsigned
+  */
+  k = n;
+  do {
+    --k;
+    for (i = k + 1; i < n; i++) {
+      z[ip[k]] = z[ip[k]] - A[ip[k]][i] * z[ip[i]];
+    }
+    z[ip[k]] = z[ip[k]] / A[ip[k]][k];
+  } while (k > 0);
+  /*
+    Reorder the solution as we copy it to the output
+  */
+  for (i = 0; i < n; i++) {
+    x[i] = z[ip[i]];
+  }
+  return;
+}
+
 int main()
 {
   UnitSquareGrid<size_t, double, std::vector> box0(7);
@@ -569,7 +658,7 @@ int main()
   std::vector<double> f;
   std::vector<size_t> x_map;
 
-  box0.matrix_system(A, x_map, f);
+  size_t N = box0.matrix_system(A, x_map, f);
 
   for (auto v : x_map) {
     std::cout << v << std::endl;
@@ -582,8 +671,50 @@ int main()
     std::cout << "| " << f[i] << std::endl;
   }
 
+  skyline::IndexSolver<size_t, double, std::vector> skyline(A);
 
   std::cout << is_symmetric<size_t, double, std::vector>(A) << std::endl;
+
+  // Solve the system with Gaussian elimination
+  std::vector<size_t> ip(N);
+  std::vector<double> xge(N);
+  std::vector<double> temp(N);
+  for (size_t i = 0; i < N; ++i) {
+    ip[i] = 0;
+    temp[i] = 0.0;
+    xge[i] = 0.0;
+  }
+
+  GEnxn<size_t, double, std::vector>(N, A, xge, f, temp, ip);
+  map_vector<size_t, double, std::vector>(xge, box0.u, x_map);
+
+  std::cout << std::endl;
+  for (size_t i = 0; i < 7; ++i) {
+    std::cout << i << ' ' << box0(i, 0) << ' ' << box0(i, 3) << std::endl;
+  }
+  std::cout << std::endl;
+
+
+  int i = 0;
+  for (auto &v : skyline.heights()) {
+    std::cout << i << ' ' << v << std::endl;
+    ++i;
+  }
+  std::cout << std::endl;
+
+  i = 0;
+  for (auto &v : skyline.offsets()) {
+    std::cout << i << ' ' << v << std::endl;
+    ++i;
+  }
+  std::cout << std::endl;
+
+  i = 0;
+  for (auto &v : skyline.upper()) {
+    std::cout << i << ' ' << v << std::endl;
+    ++i;
+  }
+  std::cout << std::endl;
 
   exit(EXIT_SUCCESS);
 
@@ -594,9 +725,9 @@ int main()
                                        {0.0, 1.0, 0.0, 7.0, 1.0},
                                        {0.0, 0.0, 0.0, 1.0, 9.0}} };
 
-  skyline::IndexSolver<size_t, double, std::vector> skyline(M);
+  //skyline::IndexSolver<size_t, double, std::vector> skyline(M);
 
-  int i = 0;
+  i = 0;
   for (auto &v : skyline.heights()) {
     std::cout << i << ' ' << v << std::endl;
     ++i;
