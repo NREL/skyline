@@ -2,6 +2,7 @@
 #define POISSON2D_HPP
 
 #include <optional>
+#include <iostream>
 
 namespace poisson {
 
@@ -11,8 +12,8 @@ enum class Rotation { CCW0 = 0, CCW90 = 90, CCW180 = 180, CCW270 = 270 };
 
 template <typename I> struct Case2D
 {
-  Case2D(Type type, Rotation rotation, I ni, I nj, I mi, I mj, I nstart, I nshift) : type(type), rotation(rotation), ni(ni), nj(nj), mi(mi), mj(mj),
-    nstart(nstart), nshift(nshift)
+  Case2D(Type type, Rotation rotation, I ni, I nj, I mi, I mj, I start, I stride) : type(type), rotation(rotation), ni(ni), nj(nj), mi(mi), mj(mj),
+    start(start), stride(stride)
   {}
 
   static std::optional<Case2D> diagnose(I ni, I nj, BoundaryCondition N, BoundaryCondition E, BoundaryCondition S, BoundaryCondition W)
@@ -45,61 +46,61 @@ template <typename I> struct Case2D
       // Non-periodic cases
       if (nD == 4) {
         // DDDD
-        return Case2D(Type::DDDD, Rotation::CCW0, ni, nj, ni - 1, nj - 1, ni + 1, 2);
+        return Case2D(Type::DDDD, Rotation::CCW0, ni, nj, ni - 2, nj - 2, ni + 1, 2);
       } else if(nD == 3) {
         // DDDA
         Rotation rotation{ Rotation::CCW0 };
         I mi{ ni - 1 };
         I mj{ nj - 2 };
-        I nstart{ ni };
-        I nshift{ 1 };
+        I start{ ni };
+        I stride{ 1 };
         if (N == BoundaryCondition::Adiabatic) {
           rotation = Rotation::CCW90;
           mi = ni - 2;
           mj = nj - 1;
-          nstart = 1;
-          nshift = 2;
+          start = 1;
+          stride = 2;
         } else if(E == BoundaryCondition::Adiabatic) {
           rotation = Rotation::CCW180;
           mi = ni - 1;
           mj = nj - 2;
-          nstart = ni + 1;
-          nshift = 1;
+          start = ni + 1;
+          stride = 1;
         } else if(S == BoundaryCondition::Adiabatic) {
           rotation = Rotation::CCW270;
           mi = ni - 2;
           mj = nj - 1;
-          nstart = ni + 1;
-          nshift = 2;
+          start = ni + 1;
+          stride = 2;
         }
-        return Case2D(Type::DDDA, rotation, ni, nj, mi, mj, nstart, nshift);
+        return Case2D(Type::DDDA, rotation, ni, nj, mi, mj, start, stride);
       } else if (nD == 1) {
         // DAAA
         Rotation rotation{ Rotation::CCW0 };
         I mi{ ni };
         I mj{ nj - 1 };
-        I nstart{ 0 };
-        I nshift{ 0 };
+        I start{ 0 };
+        I stride{ 0 };
         if (W == BoundaryCondition::Dirichlet) {
           rotation = Rotation::CCW90;
           mi = ni - 1;
           mj = nj;
-          nstart = 1;
-          nshift = 1;
+          start = 1;
+          stride = 1;
         } else if (S == BoundaryCondition::Dirichlet) {
           rotation = Rotation::CCW180;
           mi = ni;
           mj = nj - 1;
-          nstart = ni;
-          nshift = 1;
+          start = ni;
+          stride = 1;
         } else if (E == BoundaryCondition::Dirichlet) {
           rotation = Rotation::CCW270;
           mi = ni - 1;
           mj = nj;
-          nstart = 0;
-          nshift = 1;
+          start = 0;
+          stride = 1;
         }
-        return Case2D(Type::DAAA, rotation, ni, nj, mi, mj, nstart, nshift);
+        return Case2D(Type::DAAA, rotation, ni, nj, mi, mj, start, stride);
       } else if (nD == 0) {
         // AAAA, To do at some point
       } else {
@@ -135,11 +136,15 @@ template <typename I> struct Case2D
   Type type{ Type::DDDD };
   Rotation rotation{ Rotation::CCW0 };
   I ni{ 0 }, nj{ 0 }, mi{ 0 }, mj{ 0 };
-  I nstart{ 0 }, nshift{ 0 };
+  I start{ 0 }, stride{ 0 };
 };
 
 template <typename I, typename R, template <typename ...> typename V> struct Poisson2D
 {
+
+  //Poisson2D(I ni, I nj)
+  //{
+  //}
 
   Poisson2D(I n) : N(std::max(n, (I)4))
   {
@@ -150,7 +155,7 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
     for (I i = 0; i < N2; ++i) {
       u[i] = 0.0;
     }
-    R delta = 1.0 / (R)N;
+    R delta = 1.0 / (R)(N-1);
     I ij = 0;
     for (I j = 0; j < N; ++j) {
       R yy = delta * j;
@@ -167,7 +172,7 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
     return u[i + j * N];
   }
 
-  void set_east(std::function<R(R)> f)
+  void set_west(std::function<R(R)> f)
   {
     I ij = 0;
     for (I j = 0; j < N; ++j) {
@@ -176,7 +181,7 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
     }
   }
 
-  void set_west(std::function<R(R)> f)
+  void set_east(std::function<R(R)> f)
   {
     I ij = N-1;
     for (I j = 0; j < N; ++j) {
@@ -263,7 +268,7 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
     }
   }
 
-  I matrix_system(V<V<R>> &M, V<I> &x_map, V<R> &b)
+  I matrix_system(V<V<R>> &M, V<I> &x_map, V<R> &b, std::ostream *out = nullptr)
   {
     auto twod = Case2D<I>::diagnose(N, N, north_boundary_condition,
       east_boundary_condition, south_boundary_condition, west_boundary_condition);
@@ -271,20 +276,21 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
       return 0;
     }
 
-    std::cout << " Type: " << (int)(twod->type) << std::endl;
-    std::cout << "  Rot: " << (int)(twod->rotation) << std::endl;
-    std::cout << "   ni: " << twod->ni << std::endl;
-    std::cout << "   nj: " << twod->nj << std::endl;
-    std::cout << "   mi: " << twod->mi << std::endl;
-    std::cout << "   mj: " << twod->mj << std::endl;
-    std::cout << "Start: " << twod->nstart << std::endl;
-    std::cout << "Shift: " << twod->nshift << std::endl;
-    //TwoDimensionalCase<I> twod{opttwod.get()};
+    if (out != nullptr) {
+      *out << " Type: " << (int)(twod->type) << std::endl;
+      *out << "  Rot: " << (int)(twod->rotation) << std::endl;
+      *out << "   ni: " << twod->ni << std::endl;
+      *out << "   nj: " << twod->nj << std::endl;
+      *out << "   mi: " << twod->mi << std::endl;
+      *out << "   mj: " << twod->mj << std::endl;
+      *out << "Start: " << twod->start << std::endl;
+      *out << "Shift: " << twod->stride << std::endl;
+    }
 
     I N = twod->mi*twod->mj;
 
     x_map.resize(N);
-    I ij = twod->nstart;
+    I ij = twod->start;
     I mij = 0;
     for (I j = 0; j < twod->mj; ++j) {
       for (I i = 0; i < twod->mi; ++i) {
@@ -292,7 +298,7 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
         ++mij;
         ++ij;
       }
-      ij += twod->nshift;
+      ij += twod->stride;
     }
 
     // Initialize the matrix equations
@@ -307,7 +313,7 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
     }
 
     // Set up the equations
-    ij = twod->nstart;
+    ij = twod->start;
     mij = 0;
     // j = 0
     if (south_boundary_condition == BoundaryCondition::Adiabatic) {
@@ -318,7 +324,7 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
         ++mij;
       }
     }
-    ij += twod->nshift;
+    ij += twod->stride;
     // 1 <= j < mj-1
     for (I j = 1; j < twod->mj-1; ++j) {
       // i = 0
@@ -354,7 +360,7 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
       }
       ++mij;
       ++ij;
-      ij += twod->nshift;
+      ij += twod->stride;
     }
     // j = mj-1
     if (north_boundary_condition == BoundaryCondition::Adiabatic) {
