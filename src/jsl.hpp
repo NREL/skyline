@@ -71,8 +71,8 @@ template <typename I, typename R, template <typename ...> typename V> void map_v
 /*   way better because templating.                                          */
 /*                                                                           */
 /*****************************************************************************/
-template <typename I, typename R, template <typename ...> typename V> void GEnxn(I n, V<V<R>> &A, V<R> &x, V<R> &b,
-  V<R> &z, V<I> &ip)
+template <typename I, typename R, template <typename ...> typename V>
+  void GEnxn(I n, V<V<R>> &A, V<R> &x, V<R> &b, V<R> &z, V<I> &ip)
 {
   R lik, big;
   I i, j, k, itemp;
@@ -129,6 +129,165 @@ c      write(*,*)(ip(j),j=1,3)
   }
   return;
 }
+
+/*****************************************************************************/
+/*                                                                           */
+/*   LDLT - Compute the LDLT decomposition of a symmetric matrix.            */
+/*                                                                           */
+/*   Arguments:                                                              */
+/*      int_t n ------------ number of rows and columns.                     */
+/*      real_t A[][] ------- symmetric matrix.                               */
+/*      real_t *v ---------- real work vector at least n in length.          */
+/*                                                                           */
+/*   This is a straightforward implementation of algorithm 4.1.2 from Golub  */
+/*   and Van Loan:                                                           */
+/*                                                                           */
+/*   Golub and Van Loan, Matrix Computations (3rd Edition), The Johns        */
+/*   Hopkins University Press, 1996, pg 139.                                 */
+/*                                                                           */
+/*****************************************************************************/
+template <typename I, typename R, template <typename ...> typename V>
+  void LDLT(I n, V<V<R>> &A, V<R> &v)
+{
+  // Algorithm:
+  //
+  // for j=0,n-1
+  //   # Compute v[0:j]
+  //   for i = 0:j-1
+  //     v[i] = A[j][i]*A[i][i]
+  //   end
+  //   v[j] = A[j][j] - A[j][0:j-1]*v[0:j-1]
+  //   # Store d[j] and compute L[j+1:n-1][j]
+  //   A[j][j] = v[j]
+  //   A[j+1:n-1][j] = (A[j+1:n-1][0:j-1]*v[0:j-1])/v[j]
+  // end
+  //
+  // j = 0, nothing much to do
+  for (I k = 1; k < n; ++k) {
+    A[k][0] /= A[0][0];
+  }
+  // Now for the rest
+  for (I j = 1; j < n; ++j) {
+    for (I i = 0; i < j; ++i) {
+      v[i] = A[j][i] * A[i][i];
+    }
+    R value = 0.0;
+    for (I i = 0; i < j; ++i) {
+      value += A[j][i] * v[i];
+    }
+    v[j] = A[j][j] - value;
+    A[j][j] = v[j];
+    for (I k = j + 1; k < n; ++k) {
+      value = 0.0;
+      for (I i = 0; i < j; ++i) {
+        value += A[k][i] * v[i];
+      }
+      A[k][j] = (A[k][j] - value) / v[j];
+    }
+  }
+}
+
+/*****************************************************************************/
+/*                                                                           */
+/*   UTDU - Compute the LDLT decomposition of a symmetric matrix in upper    */
+/*          triangular form.                                                 */
+/*                                                                           */
+/*   Arguments:                                                              */
+/*      int_t n ------------ number of rows and columns.                     */
+/*      real_t A[][] ------- symmetric matrix.                               */
+/*      real_t *v ---------- real work vector at least n in length.          */
+/*                                                                           */
+/*   This is a modified implementation of the algorithm from Golub           */
+/*   and Van Loan that returns the upper triangular part:                    */
+/*                                                                           */
+/*   Golub and Van Loan, Matrix Computations (3rd Edition), The Johns        */
+/*   Hopkins University Press, 1996, pg 139.                                 */
+/*                                                                           */
+/*****************************************************************************/
+template <typename I, typename R, template <typename ...> typename V>
+  void UTDU(I n, V<V<R>> &A, V<R> &v)
+{
+  // j = 0, nothing much to do
+  for (I k = 1; k < n; ++k) {
+    A[0][k] /= A[0][0];
+  }
+  // Now for the rest
+  for (I j = 1; j < n; ++j) {
+    for (I i = 0; i < j; ++i) {
+      v[i] = A[i][j] * A[i][i];
+    }
+    R value = 0.0;
+    for (I i = 0; i < j; ++i) {
+      value += A[i][j] * v[i];
+    }
+    v[j] = A[j][j] - value;
+    A[j][j] = v[j];
+    for (I k = j + 1; k < n; ++k) {
+      value = 0.0;
+      for (I i = 0; i < j; ++i) {
+        value += A[i][k] * v[i];
+      }
+      A[j][k] = (A[j][k] - value) / v[j];
+    }
+  }
+}
+
+/*****************************************************************************/
+/*                                                                           */
+/*   forward_substitution - Perform foward substitution.                     */
+/*                                                                           */
+/*   Arguments:                                                              */
+/*      int_t n ------------ number of rows and columns.                     */
+/*      real_t L[][] ------- Lower triangular matrix with ones on the        */
+/*                           diagonal.                                       */
+/*      real_t b[] --------- real RHS vector at least n in length.           */
+/*                                                                           */
+/*   This is a straightforward implementation of algorithm 3.1.1 from Golub  */
+/*   and Van Loan:                                                           */
+/*                                                                           */
+/*   Golub and Van Loan, Matrix Computations (3rd Edition), The Johns        */
+/*   Hopkins University Press, 1996, pg 89.                                  */
+/*                                                                           */
+/*****************************************************************************/
+template <typename I, typename R, template <typename ...> typename V>
+  void forward_substitution(I n, V<V<R>> &L, V<R> &b)
+{
+  for (I i = 1; i < n; ++i) {
+    for (I j = 0; j < i; ++j) {
+      b[i] -= L[i][j] * b[j];
+    }
+  }
+}
+
+/*****************************************************************************/
+/*                                                                           */
+/*   back_substitution - Perform back substitution.                          */
+/*                                                                           */
+/*   Arguments:                                                              */
+/*      int_t n ------------ number of rows and columns.                     */
+/*      real_t U[][] ------- Upper triangular matrix.                        */
+/*      real_t b[] --------- real RHS vector at least n in length.           */
+/*                                                                           */
+/*   This is a straightforward implementation of algorithm 3.1.2 from Golub  */
+/*   and Van Loan:                                                           */
+/*                                                                           */
+/*   Golub and Van Loan, Matrix Computations (3rd Edition), The Johns        */
+/*   Hopkins University Press, 1996, pg 89.                                  */
+/*                                                                           */
+/*****************************************************************************/
+  template <typename I, typename R, template <typename ...> typename V>
+  void back_substitution(I n, V<V<R>> &U, V<R> &b)
+  {
+    b[n - 1] /= U[n - 1][n - 1];
+    I i = n - 1;
+    do {
+      --i;
+      for (I j = i+1; j < n; ++j) {
+        b[i] -= U[i][j] * b[j];
+      }
+      b[i] /= U[i][i];
+    } while (i > 0);
+  }
 
 } // jsl
 

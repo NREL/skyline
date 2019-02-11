@@ -34,6 +34,9 @@ TEST_CASE("Case 5 - ADAD, GEnxn", "[Poisson2D]")
   for (size_t i = 0; i < 5; ++i) {
     CHECK(p2d(i, 0) == Approx(p2d.x[i]));
     CHECK(p2d(i, 1) == Approx(p2d.x[i]));
+    CHECK(p2d(i, 2) == Approx(p2d.x[i]));
+    CHECK(p2d(i, 3) == Approx(p2d.x[i]));
+    CHECK(p2d(i, 4) == Approx(p2d.x[i]));
   }
 
   // Test other stuff
