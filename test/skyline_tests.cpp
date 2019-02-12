@@ -1,8 +1,8 @@
 #define CATCH_CONFIG_MAIN  // This tells Catch to provide a main() - only do this in one cpp file
 #include "catch.hpp"
-#include "../src/poisson2d.hpp"
-#include "../src/skyline.hpp"
-#include "../src/jsl.hpp"
+#include "../include/poisson2d.hpp"
+#include "../include/skyline.hpp"
+#include "../dependencies/jsl/jsl.hpp"
 #include <iostream>
 
 TEST_CASE("Case 5 - ADAD, Skyline Incremental 4x3", "[Skyline]")

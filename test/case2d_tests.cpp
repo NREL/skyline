@@ -1,5 +1,5 @@
 #include "catch.hpp"
-#include "../src/poisson2d.hpp"
+#include "../include/poisson2d.hpp"
 
 TEST_CASE( "Case 1 - DDDD", "[Case2D]" ) {
   auto case1 = poisson::Case2D<int>::diagnose(4, 3, poisson::BoundaryCondition::Dirichlet, poisson::BoundaryCondition::Dirichlet,

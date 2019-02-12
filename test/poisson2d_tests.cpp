@@ -1,6 +1,6 @@
 #include "catch.hpp"
-#include "../src/poisson2d.hpp"
-#include "../src/jsl.hpp"
+#include "../include/poisson2d.hpp"
+#include "../dependencies/jsl/jsl.hpp"
 
 TEST_CASE("Case 5 - ADAD, GEnxn", "[Poisson2D]")
 {

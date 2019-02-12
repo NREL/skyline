@@ -1,5 +1,5 @@
 #include "catch.hpp"
-#include "../src/jsl.hpp"
+#include "../dependencies/jsl/jsl.hpp"
 #include <iostream>
 
 void LUPSolve(std::vector<std::vector<double>> &A, std::vector<double> &b, int N, std::vector<double> &x)

@@ -5,9 +5,9 @@
 #include <functional>
 #include <iomanip>
 #include <optional>
-#include "skyline.hpp"
-#include "poisson2d.hpp"
-#include "jsl.hpp"
+#include "../include/skyline.hpp"
+#include "../include/poisson2d.hpp"
+#include "../dependencies/jsl/jsl.hpp"
 
 int main()
 {
