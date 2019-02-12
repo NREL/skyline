@@ -142,58 +142,58 @@ template <typename I> struct Case2D
 template <typename I, typename R, template <typename ...> typename V> struct Poisson2D
 {
 
-  //Poisson2D(I ni, I nj)
-  //{
-  //}
-
-  Poisson2D(I n) : N(std::max(n, (I)4))
+  Poisson2D(I ni, I nj) : ni(std::max(ni, (I)3)), nj(std::max(nj, (I)3))
   {
-    I N2 = N * N;
+    I N2 = ni * nj;
     x.resize(N2);
     y.resize(N2);
     u.resize(N2);
     for (I i = 0; i < N2; ++i) {
       u[i] = 0.0;
     }
-    R delta = 1.0 / (R)(N-1);
+    R deltax = 1.0 / (R)(ni - 1);
+    R deltay = 1.0 / (R)(nj - 1);
     I ij = 0;
-    for (I j = 0; j < N; ++j) {
-      R yy = delta * j;
-      for (I i = 0; i < N; ++i) {
+    for (I j = 0; j < nj; ++j) {
+      R yy = deltay * j;
+      for (I i = 0; i < ni; ++i) {
         y[ij] = yy;
-        x[ij] = delta * i;
+        x[ij] = deltax * i;
         ++ij;
       }
     }
   }
 
+  Poisson2D(I n) : Poisson2D(n,n)
+  {}
+
   R operator()(I i, I j)
   {
-    return u[i + j * N];
+    return u[i + j * ni];
   }
 
   void set_west(std::function<R(R)> f)
   {
     I ij = 0;
-    for (I j = 0; j < N; ++j) {
+    for (I j = 0; j < nj; ++j) {
       u[ij] = f(y[ij]);
-      ij += N;
+      ij += ni;
     }
   }
 
   void set_east(std::function<R(R)> f)
   {
-    I ij = N-1;
-    for (I j = 0; j < N; ++j) {
+    I ij = ni-1;
+    for (I j = 0; j < nj; ++j) {
       u[ij] = f(y[ij]);
-      ij += N;
+      ij += ni;
     }
   }
 
   void set_south(std::function<R(R)> f)
   {
     I ij = 0;
-    for (I j = 0; j < N; ++j) {
+    for (I j = 0; j < nj; ++j) {
       u[ij] = f(x[ij]);
       ++ij;
     }
@@ -201,21 +201,21 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
 
   void set_north(std::function<R(R)> f)
   {
-    I ij = N*(N - 1);
-    for (I j = 0; j < N; ++j) {
+    I ij = nj*(ni - 1);
+    for (I j = 0; j < nj; ++j) {
       u[ij] = f(x[ij]);
       ++ij;
     }
   }
 
-  const I N;
+  const I ni, nj;
   V<R> x, y, u;
   BoundaryCondition north_boundary_condition = BoundaryCondition::Dirichlet;
   BoundaryCondition south_boundary_condition = BoundaryCondition::Dirichlet;
   BoundaryCondition east_boundary_condition = BoundaryCondition::Dirichlet;
   BoundaryCondition west_boundary_condition = BoundaryCondition::Dirichlet;
 
-
+  /*
   R gauss_seidel_iteration()
   {
     R delta = 0.0;
@@ -267,10 +267,11 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
       ++ij;
     }
   }
+  */
 
   I matrix_system(V<V<R>> &M, V<I> &x_map, V<R> &b, std::ostream *out = nullptr)
   {
-    auto twod = Case2D<I>::diagnose(N, N, north_boundary_condition,
+    auto twod = Case2D<I>::diagnose(ni, nj, north_boundary_condition,
       east_boundary_condition, south_boundary_condition, west_boundary_condition);
     if (!twod) {
       return 0;

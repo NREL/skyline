@@ -11,7 +11,8 @@ TEST_CASE("Case 5 - ADAD, GEnxn", "[Poisson2D]")
   p2d.west_boundary_condition = poisson::BoundaryCondition::Dirichlet;
   p2d.set_east([](double y) { return 1.0; });
 
-  REQUIRE(p2d.N == 5);
+  REQUIRE(p2d.ni == 5);
+  REQUIRE(p2d.nj == 5);
   REQUIRE(p2d.x.size() == 25);
   REQUIRE(p2d.y.size() == 25);
   REQUIRE(p2d.u.size() == 25);

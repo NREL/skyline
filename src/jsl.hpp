@@ -159,7 +159,7 @@ template <typename I, typename R, template <typename ...> typename V>
   //   v[j] = A[j][j] - A[j][0:j-1]*v[0:j-1]
   //   # Store d[j] and compute L[j+1:n-1][j]
   //   A[j][j] = v[j]
-  //   A[j+1:n-1][j] = (A[j+1:n-1][0:j-1]*v[0:j-1])/v[j]
+  //   A[j+1:n-1][j] = (A[j+1:n-1][j] - A[j+1:n-1][0:j-1]*v[0:j-1])/v[j]
   // end
   //
   // j = 0, nothing much to do
@@ -207,6 +207,19 @@ template <typename I, typename R, template <typename ...> typename V>
 template <typename I, typename R, template <typename ...> typename V>
   void UTDU(I n, V<V<R>> &A, V<R> &v)
 {
+  // Algorithm:
+  //
+  // for j=0,n-1
+  //   # Compute v[0:j]
+  //   for i = 0:j-1
+  //     v[i] = A[i][j]*A[i][i]
+  //   end
+  //   v[j] = A[j][j] - A[0:j-1][j]*v[0:j-1]
+  //   # Store d[j] and compute U[j][j+1:n-1]
+  //   A[j][j] = v[j]
+  //   A[j][j+1:n-1] = (A[j][j+1:n-1] - A[0:j-1][j+1:n-1]*v[0:j-1])/v[j]
+  // end
+  //
   // j = 0, nothing much to do
   for (I k = 1; k < n; ++k) {
     A[0][k] /= A[0][0];

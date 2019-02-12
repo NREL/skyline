@@ -18,16 +18,16 @@ int main()
   box0.west_boundary_condition = poisson::BoundaryCondition::Dirichlet;
   box0.set_west([](double y) { return 1.0; });
 
-  int iter_max = 500;
-  for (int i = 0; i < iter_max; ++i) {
-    double delta = box0.gauss_seidel_iteration();
+  //int iter_max = 500;
+  //for (int i = 0; i < iter_max; ++i) {
+  //  double delta = box0.gauss_seidel_iteration();
     //box.adiabatic_north();
     //box.adiabatic_south();
-    std::cout << i + 1 << ' ' << delta << std::endl;
-    if (delta < 1.0e-17) {
-      break;
-    }
-  }
+  //  std::cout << i + 1 << ' ' << delta << std::endl;
+  //  if (delta < 1.0e-17) {
+  //    break;
+  //  }
+  //}
 
   for (size_t i = 0; i < 7; ++i) {
     std::cout << i << ' ' << box0(i, 0) << ' ' << box0(i, 3) << std::endl;

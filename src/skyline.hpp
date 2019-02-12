@@ -149,12 +149,12 @@ public:
         m_v[i] = 0.0;
       }
       for (I i = m_im[j]; i < j; ++i) {
-        m_v[i] = m_au[m_ik[j] + i - m_im[j]] * m_ad[i];
+        m_v[i] = m_au[m_ik[j] + i - m_im[j]] * m_ad[i]; // OK, i >= m_im[j]
       }
       // Compute the diagonal term
       R value = 0.0;
       for (I i = m_im[j]; i < j; ++i) {
-        value += m_au[m_ik[j] + i - m_im[j]] * m_v[i];
+        value += m_au[m_ik[j] + i - m_im[j]] * m_v[i];  // OK, i >= m_im[j]
       }
       m_ad[j] -= value;
       // Compute the rest of the row
@@ -162,10 +162,10 @@ public:
         if (m_im[k] <= j) {
           value = 0.0;
           for (I i = m_im[k]; i < j; ++i) {
-            I ij = m_ik[k] + i - m_im[k];
+            I ij = m_ik[k] + i - m_im[k]; // OK, i >= m_im[k]
             value += m_au[ij] * m_v[i];
           }
-          I ij = m_ik[j] + k - m_im[j];
+          I ij = m_ik[k] + j - m_im[k]; // OK, j >= m_im[k]
           m_au[ij] = (m_au[ij] - value) / m_ad[j];
         }
       }
