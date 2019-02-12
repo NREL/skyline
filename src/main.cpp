@@ -58,7 +58,6 @@ int main()
     std::cout << "| " << f[i] << std::endl;
   }
 
-  skyline::IndexSolver<size_t, double, std::vector> skyline(A);
 
   std::cout << jsl::is_symmetric<size_t, double, std::vector>(A) << std::endl;
 
@@ -81,7 +80,7 @@ int main()
   }
   std::cout << std::endl;
 
-
+  /*
   int i = 0;
   for (auto &v : skyline.heights()) {
     std::cout << i << ' ' << v << std::endl;
@@ -102,10 +101,10 @@ int main()
     ++i;
   }
   std::cout << std::endl;
-
+  */
   exit(EXIT_SUCCESS);
 
-
+  /*
   std::vector<std::vector<double>> M{ {{4.0, 1.0, 1.0, 0.0, 0.0},
                                        {1.0, 6.0, 0.0, 1.0, 0.0},
                                        {1.0, 0.0, 5.0, 0.0, 0.0},
@@ -207,4 +206,5 @@ int main()
   }
 
   return EXIT_SUCCESS;
+  */
 }
