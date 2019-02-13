@@ -27,7 +27,7 @@ TEST_CASE("Case 5 - ADAD, Skyline Incremental 4x3", "[Skyline]")
   //  std::cout << "| " << b[i] << std::endl;
   //}
 
-  skyline::SymmetricSkyline<size_t, double, std::vector> skyline(M);
+  skyline::SymmetricMatrix<size_t, double, std::vector> skyline(M);
 
   REQUIRE(skyline.heights().size() == 6);
   CHECK(skyline.heights()[0] == 0);
@@ -94,7 +94,7 @@ TEST_CASE("Case 5 - ADAD, Skyline Incremental 4x4", "[Skyline]")
 
   p2d.matrix_system(M, map, b);
 
-  skyline::SymmetricSkyline<size_t, double, std::vector> skyline(M);
+  skyline::SymmetricMatrix<size_t, double, std::vector> skyline(M);
 
   REQUIRE(skyline.heights().size() == 8);
   CHECK(skyline.heights()[0] == 0);
@@ -159,7 +159,7 @@ TEST_CASE("Case 5 - ADAD, Skyline Incremental 5x4", "[Skyline]")
 
   p2d.matrix_system(M, map, b);
 
-  skyline::SymmetricSkyline<size_t, double, std::vector> skyline(M);
+  skyline::SymmetricMatrix<size_t, double, std::vector> skyline(M);
 
   REQUIRE(skyline.heights().size() == 12);
   CHECK(skyline.heights()[0] == 0);
@@ -226,7 +226,7 @@ TEST_CASE("Case 5 - ADAD, Skyline Incremental 5x3", "[Skyline]")
 
   p2d.matrix_system(M, map, b);
 
-  skyline::SymmetricSkyline<size_t, double, std::vector> skyline(M);
+  skyline::SymmetricMatrix<size_t, double, std::vector> skyline(M);
 
   REQUIRE(skyline.heights().size() == 9);
   CHECK(skyline.heights()[0] == 0);
@@ -293,7 +293,7 @@ TEST_CASE("Case 5 - ADAD, Skyline", "[Skyline]")
 
   p2d.matrix_system(M, map, b);
 
-  skyline::SymmetricSkyline<size_t, double, std::vector> skyline(M);
+  skyline::SymmetricMatrix<size_t, double, std::vector> skyline(M);
 
   REQUIRE(skyline.heights().size() == 15);
   for (size_t i = 0; i < 3; ++i) {
@@ -342,7 +342,7 @@ TEST_CASE("Case 5 - ADAD, Skyline", "[Skyline]")
 TEST_CASE("G&VL Example 4.1.2", "[Skyline]")
 {
   std::vector<std::vector<double>> A{ { { 10.0, 20.0, 30.0 }, {20.0, 45.0, 80.0}, {30.0, 80.0, 171.0} } };
-  skyline::SymmetricSkyline<size_t, double, std::vector> skyline(A);
+  skyline::SymmetricMatrix<size_t, double, std::vector> skyline(A);
 
   REQUIRE(skyline.heights().size() == 3);
   CHECK(skyline.heights()[0] == 0);
