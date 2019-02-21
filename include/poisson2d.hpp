@@ -10,6 +10,133 @@ enum class BoundaryCondition { Dirichlet, Adiabatic, Periodic};
 enum class Type { DDDD=1, DDDA, DDAA, DAAA, DADA, AAAA, DPDP, APAP, DPAP, PPPP};
 enum class Rotation { CCW0 = 0, CCW90 = 90, CCW180 = 180, CCW270 = 270 };
 
+template<typename I, typename R, template <typename ...> typename V> struct GaussSiedelIterator
+{
+
+  GaussSiedelIterator(I ni, I nj, V<R> &f, BoundaryCondition N = BoundaryCondition::Dirichlet,
+    BoundaryCondition E = BoundaryCondition::Dirichlet, BoundaryCondition S = BoundaryCondition::Dirichlet,
+    BoundaryCondition W = BoundaryCondition::Dirichlet) : ni(ni), nj(nj), north_boundary_condition(N), east_boundary_condition(E),
+    south_boundary_condition(S), west_boundary_condition(W), f(f)
+  {
+    u.resize(f.size());
+    for (I i = 0; i < f.size(); ++i) {
+      u[i] = 0;
+    }
+  }
+
+  R iterate()
+  {
+    R delta = 0.0;
+    I ij = 0;
+    // First row
+    if (west_boundary_condition == BoundaryCondition::Adiabatic) {
+      u[0] = u[1];
+      delta = std::max(delta, std::abs(u[0] - u[1]));
+      ij = 1;
+    } else if (west_boundary_condition == BoundaryCondition::Dirichlet 
+      && south_boundary_condition == BoundaryCondition::Dirichlet) {
+      R last = u[0];
+      u[0] = 0.25*(f[0] + u[1] + u[ni]);
+      delta = std::abs(last - u[0]);
+      ij = 1;
+    }
+
+    if (south_boundary_condition == BoundaryCondition::Adiabatic) {
+      for (; ij < ni-1; ++ij) {
+        delta = std::max(delta, std::abs(u[ij] - u[ij + ni]));
+        u[ij] = u[ij + ni];
+      }
+    } else if (south_boundary_condition == BoundaryCondition::Dirichlet) {
+      for (; ij < ni - 1; ++ij) {
+        R last = u[ij];
+        u[ij] = 0.25*(f[ij] + u[ij + 1] + u[ij - 1] + u[ij + ni]);
+        delta = std::max(delta, std::abs(last - u[ij]));
+      }
+    }
+
+    if (east_boundary_condition == BoundaryCondition::Adiabatic) {
+      u[ij] = u[ij-1];
+      delta = std::max(delta, std::abs(u[ij] - u[ij-1]));
+      ++ij;
+    } else if (east_boundary_condition == BoundaryCondition::Dirichlet
+      && south_boundary_condition == BoundaryCondition::Dirichlet) {
+      R last = u[ij];
+      u[ij] = 0.25*(f[ij] + u[ij-1] + u[ij+ni]);
+      delta = std::abs(last - u[ij]);
+      ++ij;
+    }
+
+    // Main body
+    for (I j = 1; j < nj-1; ++j) {
+      // First
+      if (west_boundary_condition == BoundaryCondition::Adiabatic) {
+      } else {
+        R last = u[ij];
+        u[ij] = 0.25*(f[ij] + u[ij + 1] + u[ij + ni] + u[ij - ni]);
+        delta = std::max(delta, std::abs(last - u[ij]));
+      }
+      ++ij;
+      for (I i = 1; i < ni-1; ++i) {
+        R last = u[ij];
+        u[ij] = 0.25*(f[ij] + u[ij - 1] + u[ij + 1] + u[ij + ni] + u[ij - ni]);
+        delta = std::max(delta, std::abs(last - u[ij]));
+        ++ij;
+      }
+      // Last
+      if (east_boundary_condition == BoundaryCondition::Adiabatic) {
+      } else {
+        R last = u[ij];
+        u[ij] = 0.25*(f[ij] + u[ij - 1] + u[ij + ni] + u[ij - ni]);
+        delta = std::max(delta, std::abs(last - u[ij]));
+      }
+      ++ij;
+    }
+    
+    // Last row
+    if (west_boundary_condition == BoundaryCondition::Adiabatic) {
+      delta = std::max(delta, std::abs(u[ij] - u[ij + 1]));
+      u[ij] = u[ij+1];
+    } else if (west_boundary_condition == BoundaryCondition::Dirichlet
+      && south_boundary_condition == BoundaryCondition::Dirichlet) {
+      R last = u[ij];
+      u[ij] = 0.25*(f[0] + u[ij+1] + u[ij-ni]);
+      delta = std::max(delta, std::abs(last - u[ij]));
+    }
+    ++ij;
+
+    if (south_boundary_condition == BoundaryCondition::Adiabatic) {
+      for (; ij < ni - 1; ++ij) {
+        delta = std::max(delta, std::abs(u[ij] - u[ij - ni]));
+        u[ij] = u[ij - ni];
+      }
+    } else if (south_boundary_condition == BoundaryCondition::Dirichlet) {
+      for (; ij < ni - 1; ++ij) {
+        R last = u[ij];
+        u[ij] = 0.25*(f[ij] + u[ij + 1] + u[ij - 1] + u[ij + ni]);
+        delta = std::max(delta, std::abs(last - u[ij]));
+      }
+    }
+
+    if (east_boundary_condition == BoundaryCondition::Adiabatic) {
+      u[ij] = u[ij - 1];
+      delta = std::max(delta, std::abs(u[ij] - u[ij - 1]));
+    } else if (east_boundary_condition == BoundaryCondition::Dirichlet
+      && north_boundary_condition == BoundaryCondition::Dirichlet) {
+      R last = u[ij];
+      u[ij] = 0.25*(f[ij] + u[ij - 1] + u[ij - ni]);
+      delta = std::abs(last - u[ij]);
+    }
+    return delta;
+  }
+
+  I ni, nj;
+  BoundaryCondition north_boundary_condition = BoundaryCondition::Dirichlet;
+  BoundaryCondition east_boundary_condition = BoundaryCondition::Dirichlet;
+  BoundaryCondition south_boundary_condition = BoundaryCondition::Dirichlet;
+  BoundaryCondition west_boundary_condition = BoundaryCondition::Dirichlet;
+  V<R> u, f;
+};
+
 template <typename I> struct Case2D
 {
   Case2D(Type type, Rotation rotation, I ni, I nj, I mi, I mj, I start, I stride) : type(type), rotation(rotation), ni(ni), nj(nj), mi(mi), mj(mj),
@@ -148,8 +275,10 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
     x.resize(N2);
     y.resize(N2);
     u.resize(N2);
+    f.resize(N2);
     for (I i = 0; i < N2; ++i) {
       u[i] = 0.0;
+      f[i] = 0.0;
     }
     R deltax = 1.0 / (R)(ni - 1);
     R deltay = 1.0 / (R)(nj - 1);
@@ -172,102 +301,142 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
     return u[i + j * ni];
   }
 
-  void set_west(std::function<R(R)> f)
+  void set_west(std::function<R(R)> fcn)
   {
     I ij = 0;
     for (I j = 0; j < nj; ++j) {
-      u[ij] = f(y[ij]);
+      u[ij] = fcn(y[ij]);
       ij += ni;
     }
   }
 
-  void set_east(std::function<R(R)> f)
+  void set_east(std::function<R(R)> fcn)
   {
     I ij = ni-1;
     for (I j = 0; j < nj; ++j) {
-      u[ij] = f(y[ij]);
+      u[ij] = fcn(y[ij]);
       ij += ni;
     }
   }
 
-  void set_south(std::function<R(R)> f)
+  void set_south(std::function<R(R)> fcn)
   {
     I ij = 0;
     for (I j = 0; j < nj; ++j) {
-      u[ij] = f(x[ij]);
+      u[ij] = fcn(x[ij]);
       ++ij;
     }
   }
 
-  void set_north(std::function<R(R)> f)
+  void set_north(std::function<R(R)> fcn)
   {
     I ij = nj*(ni - 1);
     for (I j = 0; j < nj; ++j) {
-      u[ij] = f(x[ij]);
+      u[ij] = fcn(x[ij]);
+      ++ij;
+    }
+  }
+
+  void set_rhs(std::function<R(R,R)> fcn)
+  {
+    I ij = nj * (ni - 1);
+    for (I j = 0; j < nj; ++j) {
+      f[ij] = fcn(x[ij],y[ij]);
       ++ij;
     }
   }
 
   const I ni, nj;
-  V<R> x, y, u;
+  V<R> x, y, u, f;
   BoundaryCondition north_boundary_condition = BoundaryCondition::Dirichlet;
-  BoundaryCondition south_boundary_condition = BoundaryCondition::Dirichlet;
   BoundaryCondition east_boundary_condition = BoundaryCondition::Dirichlet;
+  BoundaryCondition south_boundary_condition = BoundaryCondition::Dirichlet;
   BoundaryCondition west_boundary_condition = BoundaryCondition::Dirichlet;
 
-  /*
-  R gauss_seidel_iteration()
+  std::optional<GaussSiedelIterator<I,R,V>> gauss_siedel_iterator(V<I> &x_map, std::ostream *out = nullptr)
   {
-    R delta = 0.0;
-    I ij = N + 1;
-    I i1 = 1;
-    I i2 = N - 1;
-    I ijshift = 2;
-
-    I j1 = 1;
-    I j2 = N-1;
-    if (south_boundary_condition == BoundaryCondition::Adiabatic) {
-      for (I i = i1; i < i2; ++i) {
-        delta = std::max(delta, std::abs(u[i] - u[i + N]));
-        u[i] = u[i + N];
-      }
+    auto twod = Case2D<I>::diagnose(ni, nj, north_boundary_condition,
+      east_boundary_condition, south_boundary_condition, west_boundary_condition);
+    if (!twod) {
+      return {};
     }
-    for (I j = j1; j < j2; ++j) {
-      for (I i = i1; i < i2; ++i) {
-        R last = u[ij];
-        u[ij] = 0.25*(u[ij - 1] + u[ij + 1] + u[ij + N] + u[ij - N]);
-        delta = std::max(delta, std::abs(last - u[ij]));
+
+    if (out != nullptr) {
+      *out << " Type: " << (int)(twod->type) << std::endl;
+      *out << "  Rot: " << (int)(twod->rotation) << std::endl;
+      *out << "   ni: " << twod->ni << std::endl;
+      *out << "   nj: " << twod->nj << std::endl;
+      *out << "   mi: " << twod->mi << std::endl;
+      *out << "   mj: " << twod->mj << std::endl;
+      *out << "Start: " << twod->start << std::endl;
+      *out << "Shift: " << twod->stride << std::endl;
+    }
+
+    I N = twod->mi*twod->mj;
+    V<R> newf(N);
+    x_map.resize(N);
+    I ij = twod->start;
+    I mij = 0;
+    for (I j = 0; j < twod->mj; ++j) {
+      for (I i = 0; i < twod->mi; ++i) {
+        x_map[mij] = ij;
+        newf[mij] = f[ij];
+        ++mij;
         ++ij;
       }
-      ij += ijshift;
+      ij += twod->stride;
     }
-    if (north_boundary_condition == BoundaryCondition::Adiabatic) {
-      for (I i = N*N-N; i < N*N-1; ++i) {
-        delta = std::max(delta, std::abs(u[i] - u[i - N]));
-        u[i] = u[i - N];
+
+    // Modify for boundary conditions
+    // Handle W border
+    ij = twod->start;
+    mij = 0;
+    if (west_boundary_condition == BoundaryCondition::Dirichlet) {
+      for (I j = 0; j < twod->mj; ++j) {
+        newf[mij] += u[ij - 1];
+        mij += twod->mi;
+        ij += ni;
+      }
+    } else {
+      mij += twod->mj*twod->mi;
+      ij += twod->mj*ni;
+    }
+    // Handle N border
+    mij = (twod->mj - 1)*twod->mi;
+    ij = x_map[mij];
+    if (north_boundary_condition == BoundaryCondition::Dirichlet) {
+      for (I i = 0; i < twod->mi; ++i) {
+        newf[mij] += u[ij + ni];
+        ++mij;
+        ++ij;
       }
     }
-    return delta;
-  }
 
-  void adiabatic_south()
-  {
-    I ij = 0;
-    for (I j = 0; j < N; ++j) {
-      u[ij] = u[ij+N];
-      ++ij;
+    // Handle S border
+    ij = twod->start;
+    mij = 0;
+    if (south_boundary_condition == BoundaryCondition::Dirichlet) {
+      for (I i = 0; i < twod->mi; ++i) {
+        newf[mij] += u[ij - ni];
+        ++mij;
+        ++ij;
+      }
     }
-  }
-
-  void adiabatic_north()
-  {
-    I ij = N * (N - 1);
-    for (I j = 0; j < N; ++j) {
-      u[ij] = u[ij-N];
-      ++ij;
+    // Handle E border
+    mij = twod->mi-1;
+    ij = x_map[mij];
+    if (east_boundary_condition == BoundaryCondition::Dirichlet) {
+      for (I j = 0; j < twod->mj; ++j) {
+        newf[mij] += u[ij + 1];
+        mij += twod->mi;
+        ij += ni;
+      }
     }
+    
+    return GaussSiedelIterator<I, R, V>(twod->mi, twod->mj, newf, north_boundary_condition, east_boundary_condition,
+      south_boundary_condition, west_boundary_condition);
+    
   }
-  */
 
   I matrix_system(V<V<R>> &M, V<I> &x_map, V<R> &b, std::ostream *out = nullptr)
   {
@@ -307,7 +476,7 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
     M.resize(twod->mi*twod->mj);
     for (I i = 0; i < N; ++i) {
       M[i].resize(twod->mi*twod->mj);
-      b[i] = 0.0;
+      b[i] = f[x_map[i]];
       for (I j = 0; j < N; ++j) {
         M[i][j] = 0.0;
       }
@@ -317,6 +486,17 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
     ij = twod->start;
     mij = 0;
     // j = 0
+    // Handle SW corner
+    if (west_boundary_condition == BoundaryCondition::Dirichlet &&
+      south_boundary_condition == BoundaryCondition::Dirichlet) {
+      b[mij] += u[ij - 1] + u[ij - ni];
+      M[mij][mij] = 4.0;
+      M[mij][mij + twod->mi] = -1.0;
+      M[mij][mij + 1] = -1.0;
+      ++ij;
+      ++mij;
+    }
+    // Now the rest
     if (south_boundary_condition == BoundaryCondition::Adiabatic) {
       for (I i = 0; i < twod->mi; ++i) {
         M[mij][mij] = 1.0;
@@ -324,6 +504,26 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
         ++ij;
         ++mij;
       }
+    } else if (south_boundary_condition == BoundaryCondition::Dirichlet) {
+      for (I i = 1; i < twod->mi-1; ++i) {
+        b[mij] += u[ij - ni];
+        M[mij][mij] = 4.0;
+        M[mij][mij + twod->mi] = -1.0;
+        M[mij][mij - 1] = -1.0;
+        M[mij][mij + 1] = -1.0;
+        ++ij;
+        ++mij;
+      }
+    }
+    // Handle the SE corner
+    if (east_boundary_condition == BoundaryCondition::Dirichlet &&
+      south_boundary_condition == BoundaryCondition::Dirichlet) {
+      b[mij] += u[ij + 1] + u[ij - ni];
+      M[mij][mij] = 4.0;
+      M[mij][mij + twod->mi] = -1.0;
+      M[mij][mij - 1] = -1.0;
+      ++ij;
+      ++mij;
     }
     ij += twod->stride;
     // 1 <= j < mj-1
@@ -364,6 +564,17 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
       ij += twod->stride;
     }
     // j = mj-1
+    // Handle the NW corner
+    if (west_boundary_condition == BoundaryCondition::Dirichlet &&
+      north_boundary_condition == BoundaryCondition::Dirichlet) {
+      b[mij] += u[ij - 1] + u[ij + ni];
+      M[mij][mij] = 4.0;
+      M[mij][mij - twod->mi] = -1.0;
+      M[mij][mij + 1] = -1.0;
+      ++ij;
+      ++mij;
+    }
+    // Now the rest
     if (north_boundary_condition == BoundaryCondition::Adiabatic) {
       for (I i = 0; i < twod->mi; ++i) {
         M[mij][mij] = 1.0;
@@ -371,8 +582,27 @@ template <typename I, typename R, template <typename ...> typename V> struct Poi
         ++ij;
         ++mij;
       }
+    } else if (north_boundary_condition == BoundaryCondition::Dirichlet) {
+      for (I i = 1; i < twod->mi - 1; ++i) {
+        b[mij] += u[ij + ni];
+        M[mij][mij] = 4.0;
+        M[mij][mij - twod->mi] = -1.0;
+        M[mij][mij - 1] = -1.0;
+        M[mij][mij + 1] = -1.0;
+        ++ij;
+        ++mij;
+      }
     }
-
+    // Handle the NE corner
+    if (east_boundary_condition == BoundaryCondition::Dirichlet &&
+      north_boundary_condition == BoundaryCondition::Dirichlet) {
+      b[mij] += u[ij + 1] + u[ij + ni];
+      M[mij][mij] = 4.0;
+      M[mij][mij - twod->mi] = -1.0;
+      M[mij][mij - 1] = -1.0;
+      ++ij;
+      ++mij;
+    }
     return N;
   }
 
