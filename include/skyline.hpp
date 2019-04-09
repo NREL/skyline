@@ -2,6 +2,7 @@
 #define SKYLINE_HPP
 
 #include <numeric>
+#include <optional>
 
 namespace skyline {
 
@@ -53,6 +54,36 @@ public:
         m_au[count] = M[i][j];
         ++count;
       }
+    }
+
+    m_v.resize(n);
+    m_n = n;
+  }
+
+  SymmetricMatrix(V<I>& heights) : m_ih(heights)
+  {
+    I n = m_ih.size();
+    auto sum = std::accumulate(m_ih.begin(), m_ih.end(), (I)0);
+
+    m_ik.resize(n);
+    m_im.resize(n);
+    // Convert heights to column offsets.
+    m_ik[0] = 0;
+    m_im[0] = 0;
+    for (I k = 1; k < n; ++k) {
+      m_ik[k] = m_ik[k - 1] + m_ih[k - 1];
+      m_im[k] = k - m_ih[k];
+    }
+
+    // Size the au/d array
+    m_ad.resize(n);
+    for (I i = 0; i < n; i++) {
+      m_ad[i] = 0.0;
+    }
+
+    m_au.resize(sum);
+    for (I i = 0; i < sum; i++) {
+      m_au[i] = 0.0;
     }
 
     m_v.resize(n);
