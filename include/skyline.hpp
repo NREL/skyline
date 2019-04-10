@@ -226,7 +226,7 @@ private:
 
   I m_n;     // System size
   V<I> m_ik; // Index offsets to top of skylines
-  V<I> m_ih; // Height of each skyline (not used, should probably be removed
+  V<I> m_ih; // Height of each skyline (not used, should probably be removed)
   V<I> m_im; // Minimum row, or top of skyline
   V<R> m_au; // Upper triangular part of matrix
   V<R> m_ad; // Diagonal of matrix
