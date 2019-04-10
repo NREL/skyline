@@ -75,7 +75,7 @@ public:
       m_im[k] = k - m_ih[k];
     }
 
-    // Size the au/d arra
+    // Size the au/d array
     m_ad.resize(n);
     for (I i = 0; i < n; i++) {
       m_ad[i] = 0.0;
