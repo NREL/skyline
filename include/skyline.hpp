@@ -90,6 +90,12 @@ public:
     m_n = n;
   }
 
+  void fill(R v = 0.0)
+  {
+    std::fill(m_ad.begin(), m_ad.end(), v);
+    std::fill(m_au.begin(), m_au.end(), v);
+  }
+
   V<I> offsets() const
   {
     return m_ik;

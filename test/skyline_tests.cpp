@@ -77,6 +77,31 @@ TEST_CASE("Case 5 - ADAD, Skyline Incremental 4x3", "[SymmetricMatrix]")
     CHECK(p2d(i, 2) == Approx(p2d.x[i]));
   }
 
+  // Fill the vectors and make sure it worked
+  skyline.fill(3.14159);
+  int i = 0;
+  for (auto& el : skyline.upper()) {
+    INFO("The index is " << i);
+    CHECK(el == 3.14159);
+    ++i;
+  }
+  for (auto& el : skyline.diagonal()) {
+    INFO("The index is " << i);
+    CHECK(el == 3.14159);
+    ++i;
+  }
+  skyline.fill(0.0);
+  i = 0;
+  for (auto& el : skyline.upper()) {
+    INFO("The index is " << i);
+    CHECK(el == 0.0);
+    ++i;
+  }
+  for (auto& el : skyline.diagonal()) {
+    INFO("The index is " << i);
+    CHECK(el == 0.0);
+    ++i;
+  }
 }
 
 TEST_CASE("Case 5 - ADAD, Skyline Incremental 4x4", "[SymmetricMatrix]")
