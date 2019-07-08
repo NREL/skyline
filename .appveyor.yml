@@ -20,7 +20,7 @@ build:
   project: build\skyline.sln
   parallel: true
   verbosity: normal # quiet|minimal|normal|detailed
-	
+
 test_script:
   - cd build\bin\Release
   - cmd: skyline_tests.exe
