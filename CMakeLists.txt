@@ -2,8 +2,8 @@
 project(skyline)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-  if(${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "4.6.0")
-    message(FATAL_ERROR "g++ versions earlier than 4.6.0 are not supported")
+  if(${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "7.1.0")
+    message(FATAL_ERROR "g++ versions earlier than 7.1.0 are not supported")
   endif()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 elseif(MSVC)

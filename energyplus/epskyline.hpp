@@ -57,10 +57,10 @@
 template <typename T> class OneArray
 {
 public:
-  OneArray(int n, T default = 0)
+  OneArray(int n, T default_value = 0)
   {
     for (int i = 0; i < n; ++i) {
-      m_v.push_back(default);
+      m_v.push_back(default_value);
     }
   }
 
