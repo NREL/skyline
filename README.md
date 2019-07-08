@@ -1,4 +1,7 @@
 # skyline
+
+[![Build Status](https://travis-ci.com/jasondegraw/skyline.svg?branch=master)](https://travis-ci.com/jasondegraw/skyline)
+
 A header-only C++ direct solver for sparse matrices stored in skyline format. Include the header and then create the object:
 
 ```
