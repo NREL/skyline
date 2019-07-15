@@ -66,10 +66,19 @@ public:
     }
 
     // Copy into the am array
+#ifdef SKYLINE_SINGLE_ARRAY
     m_am.resize(n + sum);
+#else
+    m_ad.resize(n);
+    m_au.resize(sum);
+#endif
     I count = 0;
     for (I i = 0; i < n; i++) {
+#ifdef SKYLINE_SINGLE_ARRAY
       m_am[i] = M[i][i];
+#else
+      m_ad[i] = M[i][i];
+#endif
       I j;
       for (j = 0; j < i; j++) {
         if (M[i][j] != 0.0) {
@@ -77,7 +86,11 @@ public:
         }
       }
       for (; j < i; j++) {
+#ifdef SKYLINE_SINGLE_ARRAY
         m_am[n + count] = M[i][j];
+#else
+        m_au[count] = M[i][j];
+#endif
         ++count;
       }
     }
@@ -101,12 +114,25 @@ public:
       m_im[k] = k - m_ih[k];
     }
 
+#ifdef SKYLINE_SINGLE_ARRAY
     // Size the am array
     I total{ n + sum };
     m_am.resize(total);
     for (I i = 0; i < total; i++) {
       m_am[i] = 0.0;
     }
+#else
+    // Size the au/d array
+    m_ad.resize(n);
+    for (I i = 0; i < n; i++) {
+      m_ad[i] = 0.0;
+    }
+
+    m_au.resize(sum);
+    for (I i = 0; i < sum; i++) {
+      m_au[i] = 0.0;
+    }
+#endif
 
     m_v.resize(n);
     m_n = n;
@@ -114,7 +140,12 @@ public:
 
   void fill(R v = 0.0)
   {
+#ifdef SKYLINE_SINGLE_ARRAY
     std::fill(m_am.begin(), m_am.end(), v);
+#else
+    std::fill(m_ad.begin(), m_ad.end(), v);
+    std::fill(m_au.begin(), m_au.end(), v);
+#endif
   }
 
   V<I> offsets() const
@@ -134,27 +165,47 @@ public:
 
   V<R> diagonal() const
   {
+#ifdef SKYLINE_SINGLE_ARRAY
     return V<R>(m_am.begin(), m_am.begin() + m_n);
+#else
+    return m_ad;
+#endif
   }
 
   V<R> upper() const
   {
+#ifdef SKYLINE_SINGLE_ARRAY
     return V<R>(m_am.begin()+m_n, m_am.end());
+#else
+    return m_au;
+#endif
   }
 
   V<R> lower() const
   {
+#ifdef SKYLINE_SINGLE_ARRAY
     return V<R>(m_am.begin() + m_n, m_am.end());
+#else
+    return m_au;
+#endif
   }
 
   R &operator()(I i)
   {
+#ifdef SKYLINE_SINGLE_ARRAY
     return m_am[i];
+#else
+    return m_au[i];
+#endif
   }
 
   R &diagonal(I i)
   {
+#ifdef SKYLINE_SINGLE_ARRAY
     return m_am[i]; // This ends up being the same as operator()
+#else
+    return m_ad[i];
+#endif
   }
 
   std::optional<I> index(I i, I j) const
@@ -172,8 +223,13 @@ public:
     // j = 0, nothing much to do
     for (I k = 1; k < m_n; ++k) {
       if (m_im[k] == 0) {
+#ifdef SKYLINE_SINGLE_ARRAY
         I ij = m_n + m_ik[k];
         m_am[ij] /= m_am[0];
+#else
+        I ij = m_ik[k];
+        m_au[ij] /= m_ad[0];
+#endif
       }
     }
     // Now for the rest
@@ -183,24 +239,45 @@ public:
         m_v[i] = 0.0;
       }
       for (I i = m_im[j]; i < j; ++i) {
+#ifdef SKYLINE_SINGLE_ARRAY
         m_v[i] = m_am[m_n + m_ik[j] + i - m_im[j]] * m_am[i]; // OK, i >= m_im[j]
+#else
+        m_v[i] = m_au[m_ik[j] + i - m_im[j]] * m_ad[i]; // OK, i >= m_im[j]
+#endif
       }
       // Compute the diagonal term
       R value = 0.0;
       for (I i = m_im[j]; i < j; ++i) {
+#ifdef SKYLINE_SINGLE_ARRAY
         value += m_am[m_n + m_ik[j] + i - m_im[j]] * m_v[i];  // OK, i >= m_im[j]
+#else
+        value += m_au[m_ik[j] + i - m_im[j]] * m_v[i];  // OK, i >= m_im[j]
+#endif
       }
+#ifdef SKYLINE_SINGLE_ARRAY
       m_am[j] -= value;
+#else
+      m_ad[j] -= value;
+#endif
       // Compute the rest of the row
       for (I k = j + 1; k < m_n; ++k) {
         if (m_im[k] <= j) {
           value = 0.0;
+#ifdef SKYLINE_SINGLE_ARRAY
           for (I i = m_im[k]; i < j; ++i) {
             I ij = m_n + m_ik[k] + i - m_im[k]; // OK, i >= m_im[k]
             value += m_am[ij] * m_v[i];
           }
           I ij = m_n + m_ik[k] + j - m_im[k]; // OK, j >= m_im[k]
           m_am[ij] = (m_am[ij] - value) / m_am[j];
+#else
+          for (I i = m_im[k]; i < j; ++i) {
+            I ij = m_ik[k] + i - m_im[k]; // OK, i >= m_im[k]
+            value += m_au[ij] * m_v[i];
+          }
+          I ij = m_ik[k] + j - m_im[k]; // OK, j >= m_im[k]
+          m_au[ij] = (m_au[ij] - value) / m_ad[j];
+#endif
         }
       }
     }
@@ -212,8 +289,13 @@ public:
     for (I i = 1; i < m_n; ++i) {
       R value = 0.0;
       for (I k = m_im[i]; k < i; ++k) {
+#ifdef SKYLINE_SINGLE_ARRAY
         I ij = m_n + m_ik[i] + k - m_im[i];
         value += m_am[ij] * b[k];
+#else
+        I ij = m_ik[i] + k - m_im[i];
+        value += m_au[ij] * b[k];
+#endif
       }
       b[i] -= value;
     }
@@ -223,13 +305,22 @@ public:
   {
     // Account for the diagonal first (invert Dy=z)
     for (I j = 0; j < m_n; ++j) {
+#ifdef SKYLINE_SINGLE_ARRAY
       z[j] /= m_am[j];
+#else
+      z[j] /= m_ad[j];
+#endif
     }
     // Solve Ux=y
     for (I j = m_n - 1; j > 0; --j) {
       for (I k = m_im[j]; k < j; ++k) {
+#ifdef SKYLINE_SINGLE_ARRAY
         I ij = m_n + m_ik[j] + k - m_im[j];
         z[k] -= z[j] * m_am[ij];
+#else
+        I ij = m_ik[j] + k - m_im[j];
+        z[k] -= z[j] * m_au[ij];
+#endif
       }
     }
   }
@@ -257,9 +348,12 @@ private:
   V<I> m_ik; // Index offsets to top of skylines
   V<I> m_ih; // Height of each skyline (not used, should probably be removed)
   V<I> m_im; // Minimum row, or top of skyline
+#ifdef SKYLINE_SINGLE_ARRAY
   V<R> m_am; // The entire matrix in one vector, first the diagonal, then the rest
-  //V<R> m_au; // Upper triangular part of matrix
-  //V<R> m_ad; // Diagonal of matrix
+#else
+  V<R> m_au; // Upper triangular part of matrix
+  V<R> m_ad; // Diagonal of matrix
+#endif
   V<R> m_v;  // Temporary used in solution
 };
 
