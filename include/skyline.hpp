@@ -65,10 +65,11 @@ public:
       m_im[k] = k - m_ih[k];
     }
 
-    // Copy into the am array
 #ifdef SKYLINE_SINGLE_ARRAY
+    // Copy into the am array
     m_am.resize(n + sum);
 #else
+    // Copy into the au/d arrays
     m_ad.resize(n);
     m_au.resize(sum);
 #endif
@@ -218,7 +219,7 @@ public:
     return {};
   }
 
-  void utdu()
+  virtual void utdu()
   {
     // j = 0, nothing much to do
     for (I k = 1; k < m_n; ++k) {
@@ -283,7 +284,7 @@ public:
     }
   }
 
-  void forward_substitution(V<R> &b) const
+  virtual void forward_substitution(V<R> &b) const
   {
     // Solve Lz=b (Dy=z, Ux=y)
     for (I i = 1; i < m_n; ++i) {
@@ -301,7 +302,7 @@ public:
     }
   }
 
-  void back_substitution(V<R> &z) const
+  virtual void back_substitution(V<R> &z) const
   {
     // Account for the diagonal first (invert Dy=z)
     for (I j = 0; j < m_n; ++j) {
@@ -325,7 +326,14 @@ public:
     }
   }
 
-  void ldlt_solve(V<R> &b)
+  virtual void ldlt_solve(V<R> &b)
+  {
+    utdu();
+    forward_substitution(b);
+    back_substitution(b);
+  }
+
+  virtual void utdu_solve(V<R>& b)
   {
     utdu();
     forward_substitution(b);
@@ -342,7 +350,7 @@ public:
     return m_n;
   }
 
-private:
+protected:
 
   I m_n;     // System size
   V<I> m_ik; // Index offsets to top of skylines
@@ -356,6 +364,219 @@ private:
 #endif
   V<R> m_v;  // Temporary used in solution
 };
+
+template <typename I, typename R, template <typename ...> typename V> class SymmetricSkipMatrix : public SymmetricMatrix<I, R, V>
+{
+public:
+
+  SymmetricSkipMatrix(V<V<R>>& M) : SymmetricMatrix<I, R, V>(M)
+  {
+    m_skip.resize(this->m_n);
+    m_ip.resize(this->m_n);
+    for (I k = 0; k < m_n; ++k) {
+      m_skip[k] = false;
+      m_ip[k] = k;
+    }
+    m_locked = false;
+    m_n_actual = this->m_n;
+  }
+
+  SymmetricSkipMatrix(V<I>& heights) : SymmetricMatrix<I, R, V>(heights)
+  {
+    m_skip.resize(this->m_n);
+    m_ip.resize(this->m_n);
+    I current = 0;
+    for (I k = 0; k < m_n; ++k) {
+      m_skip[k] = false;
+      m_ip[k] = k;
+    }
+    m_locked = false;
+    m_n_actual = this->m_n;
+  }
+
+  void utdu()
+  {
+    // j = 0, nothing much to do
+    for (I k = 1; k < m_n_actual; ++k) {
+      if (m_im[m_ip[k]] <= m_ip[0]) {
+#ifdef SKYLINE_SINGLE_ARRAY
+        I ij = m_n + m_ik[m_ip[k]];
+        m_am[ij] /= m_am[0];
+#else
+        I ij = m_ik[m_ip[k]];
+        m_au[ij] /= m_ad[m_ip[0]];
+#endif
+      }
+    }
+    // Now for the rest
+    for (I j = 1; j < m_n_actual; ++j) {
+      // Compute v
+      for (I i = 0; i < m_im[m_ip[j]]; ++i) {
+        m_v[m_ip[i]] = 0.0;
+      }
+      for (I i = m_im[m_ip[j]]; i < j; ++i) {
+#ifdef SKYLINE_SINGLE_ARRAY
+        m_v[m_ip[i]] = m_am[m_n + m_ik[m_ip[j]] + i - m_im[m_ip[j]]] * m_am[m_ip[i]]; // OK, i >= m_im[j]
+#else
+        m_v[m_ip[i]] = m_au[m_ik[m_ip[j]] + i - m_im[m_ip[j]]] * m_ad[m_ip[i]]; // OK, i >= m_im[j]
+#endif
+      }
+      // Compute the diagonal term
+      R value = 0.0;
+      for (I i = m_im[m_ip[j]]; i < j; ++i) {
+#ifdef SKYLINE_SINGLE_ARRAY
+        value += m_am[m_n + m_ik[m_ip[j]] + i - m_im[m_ip[j]]] * m_v[m_ip[i]];  // OK, i >= m_im[j]
+#else
+        value += m_au[m_ik[m_ip[j]] + i - m_im[m_ip[j]]] * m_v[m_ip[i]];  // OK, i >= m_im[j]
+#endif
+      }
+#ifdef SKYLINE_SINGLE_ARRAY
+      m_am[m_ip[j]] -= value;
+#else
+      m_ad[m_ip[j]] -= value;
+#endif
+      // Compute the rest of the row
+      for (I k = j + 1; k < m_n_actual; ++k) {
+        if (m_im[m_ip[k]] <= j) {
+          value = 0.0;
+#ifdef SKYLINE_SINGLE_ARRAY
+          for (I i = m_im[k]; i < j; ++i) {
+            I ij = m_n + m_ik[k] + i - m_im[k]; // OK, i >= m_im[k]
+            value += m_am[ij] * m_v[i];
+          }
+          I ij = m_n + m_ik[k] + j - m_im[k]; // OK, j >= m_im[k]
+          m_am[ij] = (m_am[ij] - value) / m_am[j];
+#else
+          for (I i = m_im[m_ip[k]]; i < j; ++i) {
+            I ij = m_ik[m_ip[k]] + i - m_im[m_ip[k]]; // OK, i >= m_im[k]
+            value += m_au[ij] * m_v[m_ip[i]];
+          }
+          I ij = m_ik[m_ip[k]] + j - m_im[m_ip[k]]; // OK, j >= m_im[k]
+          m_au[ij] = (m_au[ij] - value) / m_ad[m_ip[j]];
+#endif
+        }
+      }
+    }
+  }
+
+  void forward_substitution(V<R>& b) const
+  {
+    // Solve Lz=b (Dy=z, Ux=y)
+    for (I i = 1; i < m_n_actual; ++i) {
+      R value = 0.0;
+      for (I k = m_im[m_ip[i]]; k < i; ++k) {
+#ifdef SKYLINE_SINGLE_ARRAY
+        I ij = m_n + m_ik[m_ip[i]] + k - m_im[m_ip[i]];
+        value += m_am[ij] * b[m_ip[k]];
+#else
+        I ij = m_ik[m_ip[i]] + k - m_im[m_ip[i]];
+        value += m_au[ij] * b[m_ip[k]];
+#endif
+      }
+      b[m_ip[i]] -= value;
+    }
+  }
+
+  void back_substitution(V<R>& z) const
+  {
+    // Account for the diagonal first (invert Dy=z)
+    for (I j = 0; j < m_n_actual; ++j) {
+#ifdef SKYLINE_SINGLE_ARRAY
+      z[m_ip[j]] /= m_am[m_ip[j]];
+#else
+      z[m_ip[j]] /= m_ad[m_ip[j]];
+#endif
+    }
+    // Solve Ux=y
+    for (I j = m_n_actual - 1; j > 0; --j) {
+      for (I k = m_im[m_ip[j]]; k < j; ++k) {
+#ifdef SKYLINE_SINGLE_ARRAY
+        I ij = m_n + m_ik[m_ip[j]] + k - m_im[m_ip[j]];
+        z[m_ip[k]] -= z[m_ip[j]] * m_am[ij];
+#else
+        I ij = m_ik[m_ip[j]] + k - m_im[m_ip[j]];
+        z[m_ip[k]] -= z[m_ip[j]] * m_au[ij];
+#endif
+      }
+    }
+  }
+
+  virtual void ldlt_solve(V<R>& b)
+  {
+    lock();
+    utdu();
+    forward_substitution(b);
+    back_substitution(b);
+    unlock();
+  }
+
+  virtual void utdu_solve(V<R>& b)
+  {
+    lock();
+    utdu();
+    forward_substitution(b);
+    back_substitution(b);
+    unlock();
+  }
+
+  bool skip(I i)
+  {
+    if (m_locked) {
+      return false;
+    }
+    m_skip[i] = !m_skip[i];
+    return true;
+  }
+
+  bool &skip(I i) const
+  {
+    return m_skip[i];
+  }
+
+  V<bool> skip()
+  {
+    return m_skip;
+  }
+
+  void unskip()
+  {
+    for (I i = 0; i < m_n; ++i) {
+      m_skip[i] = false;
+    }
+  }
+
+  V<I> ip()
+  {
+    return m_ip;
+  }
+
+  void lock()
+  {
+    if (m_locked) {
+      return;
+    }
+    I current = 0;
+    for (I i = 0; i < m_n; ++i) {
+      if (!m_skip[i]) {
+        m_ip[current] = i;
+        ++current;
+      }
+    }
+    m_n_actual = current;
+  }
+
+  void unlock()
+  {
+    m_locked = false;
+  }
+
+private:
+  bool m_locked;
+  V<bool> m_skip;
+  V<I> m_ip;
+  I m_n_actual;
+};
+
 
 }
 
