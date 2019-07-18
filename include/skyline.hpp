@@ -373,7 +373,7 @@ public:
   {
     m_skip.resize(this->m_n);
     m_ip.resize(this->m_n);
-    for (I k = 0; k < m_n; ++k) {
+    for (I k = 0; k < this->m_n; ++k) {
       m_skip[k] = false;
       m_ip[k] = k;
     }
@@ -386,7 +386,7 @@ public:
     m_skip.resize(this->m_n);
     m_ip.resize(this->m_n);
     I current = 0;
-    for (I k = 0; k < m_n; ++k) {
+    for (I k = 0; k < this->m_n; ++k) {
       m_skip[k] = false;
       m_ip[k] = k;
     }
@@ -398,13 +398,13 @@ public:
   {
     // j = 0, nothing much to do
     for (I k = 1; k < m_n_actual; ++k) {
-      if (m_im[m_ip[k]] <= m_ip[0]) {
+      if (this->m_im[m_ip[k]] <= m_ip[0]) {
 #ifdef SKYLINE_SINGLE_ARRAY
-        I ij = m_n + m_ik[m_ip[k]];
-        m_am[ij] /= m_am[0];
+        I ij = m_n + this->m_ik[m_ip[k]];
+        this->m_am[ij] /= this->m_am[0];
 #else
-        I ij = m_ik[m_ip[k]];
-        m_au[ij] /= m_ad[m_ip[0]];
+        I ij = this->m_ik[m_ip[k]];
+        this->m_au[ij] /= this->m_ad[m_ip[0]];
 #endif
       }
     }
@@ -412,47 +412,47 @@ public:
     for (I j = 1; j < m_n_actual; ++j) {
       // Compute v
       for (I i = 0; i < m_im[m_ip[j]]; ++i) {
-        m_v[m_ip[i]] = 0.0;
+        this->m_v[m_ip[i]] = 0.0;
       }
-      for (I i = m_im[m_ip[j]]; i < j; ++i) {
+      for (I i = this->m_im[m_ip[j]]; i < j; ++i) {
 #ifdef SKYLINE_SINGLE_ARRAY
-        m_v[m_ip[i]] = m_am[m_n + m_ik[m_ip[j]] + i - m_im[m_ip[j]]] * m_am[m_ip[i]]; // OK, i >= m_im[j]
+        this->m_v[m_ip[i]] = this->m_am[m_n + this->m_ik[m_ip[j]] + i - this->m_im[m_ip[j]]] * this->m_am[m_ip[i]]; // OK, i >= m_im[j]
 #else
-        m_v[m_ip[i]] = m_au[m_ik[m_ip[j]] + i - m_im[m_ip[j]]] * m_ad[m_ip[i]]; // OK, i >= m_im[j]
+        this->m_v[m_ip[i]] = this->m_au[this->m_ik[m_ip[j]] + i - this->m_im[m_ip[j]]] * this->m_ad[m_ip[i]]; // OK, i >= m_im[j]
 #endif
       }
       // Compute the diagonal term
       R value = 0.0;
-      for (I i = m_im[m_ip[j]]; i < j; ++i) {
+      for (I i = this->m_im[m_ip[j]]; i < j; ++i) {
 #ifdef SKYLINE_SINGLE_ARRAY
         value += m_am[m_n + m_ik[m_ip[j]] + i - m_im[m_ip[j]]] * m_v[m_ip[i]];  // OK, i >= m_im[j]
 #else
-        value += m_au[m_ik[m_ip[j]] + i - m_im[m_ip[j]]] * m_v[m_ip[i]];  // OK, i >= m_im[j]
+        value += this->m_au[this->m_ik[m_ip[j]] + i - this->m_im[m_ip[j]]] * m_v[this->m_ip[i]];  // OK, i >= m_im[j]
 #endif
       }
 #ifdef SKYLINE_SINGLE_ARRAY
-      m_am[m_ip[j]] -= value;
+      this->m_am[m_ip[j]] -= value;
 #else
-      m_ad[m_ip[j]] -= value;
+      this->m_ad[m_ip[j]] -= value;
 #endif
       // Compute the rest of the row
       for (I k = j + 1; k < m_n_actual; ++k) {
-        if (m_im[m_ip[k]] <= j) {
+        if (this->m_im[m_ip[k]] <= j) {
           value = 0.0;
 #ifdef SKYLINE_SINGLE_ARRAY
-          for (I i = m_im[k]; i < j; ++i) {
-            I ij = m_n + m_ik[k] + i - m_im[k]; // OK, i >= m_im[k]
-            value += m_am[ij] * m_v[i];
+          for (I i = this->m_im[k]; i < j; ++i) {
+            I ij = this->m_n + this->m_ik[k] + i - this->m_im[k]; // OK, i >= m_im[k]
+            value += this->m_am[ij] * this->m_v[i];
           }
-          I ij = m_n + m_ik[k] + j - m_im[k]; // OK, j >= m_im[k]
-          m_am[ij] = (m_am[ij] - value) / m_am[j];
+          I ij = this->m_n + this->m_ik[k] + j - this->m_im[k]; // OK, j >= m_im[k]
+          this->m_am[ij] = (this->m_am[ij] - value) / this->m_am[j];
 #else
-          for (I i = m_im[m_ip[k]]; i < j; ++i) {
-            I ij = m_ik[m_ip[k]] + i - m_im[m_ip[k]]; // OK, i >= m_im[k]
-            value += m_au[ij] * m_v[m_ip[i]];
+          for (I i = this->m_im[m_ip[k]]; i < j; ++i) {
+            I ij = this->m_ik[m_ip[k]] + i - this->m_im[m_ip[k]]; // OK, i >= m_im[k]
+            value += this->m_au[ij] * this->m_v[m_ip[i]];
           }
-          I ij = m_ik[m_ip[k]] + j - m_im[m_ip[k]]; // OK, j >= m_im[k]
-          m_au[ij] = (m_au[ij] - value) / m_ad[m_ip[j]];
+          I ij = this->m_ik[m_ip[k]] + j - this->m_im[m_ip[k]]; // OK, j >= m_im[k]
+          this->m_au[ij] = (this->m_au[ij] - value) / this->m_ad[m_ip[j]];
 #endif
         }
       }
@@ -466,11 +466,11 @@ public:
       R value = 0.0;
       for (I k = m_im[m_ip[i]]; k < i; ++k) {
 #ifdef SKYLINE_SINGLE_ARRAY
-        I ij = m_n + m_ik[m_ip[i]] + k - m_im[m_ip[i]];
-        value += m_am[ij] * b[m_ip[k]];
+        I ij = this->m_n + this->m_ik[m_ip[i]] + k - this->m_im[m_ip[i]];
+        value += this->m_am[ij] * b[m_ip[k]];
 #else
-        I ij = m_ik[m_ip[i]] + k - m_im[m_ip[i]];
-        value += m_au[ij] * b[m_ip[k]];
+        I ij = this->m_ik[m_ip[i]] + k - this->m_im[m_ip[i]];
+        value += this->m_au[ij] * b[m_ip[k]];
 #endif
       }
       b[m_ip[i]] -= value;
@@ -482,20 +482,20 @@ public:
     // Account for the diagonal first (invert Dy=z)
     for (I j = 0; j < m_n_actual; ++j) {
 #ifdef SKYLINE_SINGLE_ARRAY
-      z[m_ip[j]] /= m_am[m_ip[j]];
+      z[m_ip[j]] /= this->m_am[m_ip[j]];
 #else
-      z[m_ip[j]] /= m_ad[m_ip[j]];
+      z[m_ip[j]] /= this->m_ad[m_ip[j]];
 #endif
     }
     // Solve Ux=y
     for (I j = m_n_actual - 1; j > 0; --j) {
-      for (I k = m_im[m_ip[j]]; k < j; ++k) {
+      for (I k = this->m_im[m_ip[j]]; k < j; ++k) {
 #ifdef SKYLINE_SINGLE_ARRAY
-        I ij = m_n + m_ik[m_ip[j]] + k - m_im[m_ip[j]];
-        z[m_ip[k]] -= z[m_ip[j]] * m_am[ij];
+        I ij = this->m_n + this->m_ik[m_ip[j]] + k - this->m_im[m_ip[j]];
+        z[m_ip[k]] -= z[m_ip[j]] * this->m_am[ij];
 #else
-        I ij = m_ik[m_ip[j]] + k - m_im[m_ip[j]];
-        z[m_ip[k]] -= z[m_ip[j]] * m_au[ij];
+        I ij = this->m_ik[m_ip[j]] + k - this->m_im[m_ip[j]];
+        z[m_ip[k]] -= z[m_ip[j]] * this->m_au[ij];
 #endif
       }
     }
