@@ -411,7 +411,7 @@ public:
     // Now for the rest
     for (I j = 1; j < m_n_actual; ++j) {
       // Compute v
-      for (I i = 0; i < m_im[m_ip[j]]; ++i) {
+      for (I i = 0; i < this->m_im[m_ip[j]]; ++i) {
         this->m_v[m_ip[i]] = 0.0;
       }
       for (I i = this->m_im[m_ip[j]]; i < j; ++i) {
@@ -427,7 +427,7 @@ public:
 #ifdef SKYLINE_SINGLE_ARRAY
         value += m_am[m_n + m_ik[m_ip[j]] + i - m_im[m_ip[j]]] * m_v[m_ip[i]];  // OK, i >= m_im[j]
 #else
-        value += this->m_au[this->m_ik[m_ip[j]] + i - this->m_im[m_ip[j]]] * m_v[this->m_ip[i]];  // OK, i >= m_im[j]
+        value += this->m_au[this->m_ik[m_ip[j]] + i - this->m_im[m_ip[j]]] * this->m_v[this->m_ip[i]];  // OK, i >= m_im[j]
 #endif
       }
 #ifdef SKYLINE_SINGLE_ARRAY
@@ -464,7 +464,7 @@ public:
     // Solve Lz=b (Dy=z, Ux=y)
     for (I i = 1; i < m_n_actual; ++i) {
       R value = 0.0;
-      for (I k = m_im[m_ip[i]]; k < i; ++k) {
+      for (I k = this->m_im[m_ip[i]]; k < i; ++k) {
 #ifdef SKYLINE_SINGLE_ARRAY
         I ij = this->m_n + this->m_ik[m_ip[i]] + k - this->m_im[m_ip[i]];
         value += this->m_am[ij] * b[m_ip[k]];
@@ -540,7 +540,7 @@ public:
 
   void unskip()
   {
-    for (I i = 0; i < m_n; ++i) {
+    for (I i = 0; i < this->m_n; ++i) {
       m_skip[i] = false;
     }
   }
@@ -556,7 +556,7 @@ public:
       return;
     }
     I current = 0;
-    for (I i = 0; i < m_n; ++i) {
+    for (I i = 0; i < this->m_n; ++i) {
       if (!m_skip[i]) {
         m_ip[current] = i;
         ++current;
