@@ -489,11 +489,11 @@ TEST_CASE("G&VL Example 4.1.2, Again", "[SymmetricSkipMatrix]")
   CHECK(b[2] == Approx(1.0));
 }
 
-TEST_CASE("G&VL Example 4.1.2, Skip Middle", "[SymmetricSkipMatrix]")
+TEST_CASE("G&VL Example 4.1.2, Skip Middle Row", "[SymmetricSkipMatrix]")
 {
   std::vector<std::vector<double>> A{ { { 10.0, 20.0, 30.0 }, {20.0, 45.0, 80.0}, {30.0, 80.0, 171.0} } };
   skyline::SymmetricSkipMatrix<size_t, double, std::vector> skyline(A);
-  skyline.skip(1);
+  skyline.skip(1); // Skip the middle row
 
   REQUIRE(skyline.heights().size() == 3);
   CHECK(skyline.heights()[0] == 0);
@@ -543,12 +543,12 @@ TEST_CASE("G&VL Example 4.1.2, Skip Middle", "[SymmetricSkipMatrix]")
   CHECK(!skyline.skip()[2]);
 
   CHECK(skyline.upper()[0] == 20.0);
-  CHECK(skyline.upper()[1] == 3.0);
+  CHECK(skyline.upper()[1] == 3.0); // This is the only one that is touched
   CHECK(skyline.upper()[2] == 80.0);
 
-  CHECK(skyline.diagonal(0) == 10.0);
+  CHECK(skyline.diagonal(0) == 10.0); // This gets changed
   CHECK(skyline.diagonal(1) == 45.0);
-  CHECK(skyline.diagonal(2) == 81.0);
+  CHECK(skyline.diagonal(2) == 81.0); // And this gets changed
 
   //for (auto& v : skyline.diagonal()) {
   //  std::cout << v << std::endl;
@@ -569,7 +569,7 @@ TEST_CASE("G&VL Example 4.1.2, Skip Middle", "[SymmetricSkipMatrix]")
   CHECK(b[2] == Approx(1.0));
 }
 
-TEST_CASE("G&VL Example 4.1.2, No Middle", "[SymmetricMatrix]")
+TEST_CASE("G&VL Example 4.1.2, No Middle Row", "[SymmetricMatrix]")
 {
   std::vector<std::vector<double>> A{ { { 10.0, 30.0 }, {30.0, 171.0} } };
   skyline::SymmetricMatrix<size_t, double, std::vector> skyline(A);
@@ -763,7 +763,7 @@ TEST_CASE("Case 1 - DDDD 16x16 f=6xy(1-y)-2x^3, Skyline", "[SymmetricMatrix]")
 }
 
 
-TEST_CASE("Case 5 - ADAD, Skyline w/ Skip Incremental 4x4", "[SymmetricSkipMatrix]")
+TEST_CASE("Case 5 - ADAD, Skyline Skip w/out Skip Incremental 4x4", "[SymmetricSkipMatrix]")
 {
   poisson::Poisson2D<size_t, double, std::vector> p2d(4, 4);
   p2d.north_boundary_condition = poisson::BoundaryCondition::Adiabatic;
@@ -776,10 +776,6 @@ TEST_CASE("Case 5 - ADAD, Skyline w/ Skip Incremental 4x4", "[SymmetricSkipMatri
   std::vector<double> b;
   std::vector<size_t> map;
   
-  //double onethird{ 1.0 / 3.0 };
-
-  //std::vector<double> x{ {0.0, onethird, 1.0 - onethird, 1.0} };
-
   p2d.matrix_system(M, map, b);
 
   skyline::SymmetricSkipMatrix<size_t, double, std::vector> skyline(M);
@@ -830,161 +826,4 @@ TEST_CASE("Case 5 - ADAD, Skyline w/ Skip Incremental 4x4", "[SymmetricSkipMatri
     CHECK(p2d(i, 3) == Approx(p2d.x[i]));
   }
 
-  // Convert the problem into a 4x3 problem
-  poisson::Poisson2D<size_t, double, std::vector> p2d3(4, 3);
-  p2d3.north_boundary_condition = poisson::BoundaryCondition::Adiabatic;
-  p2d3.east_boundary_condition = poisson::BoundaryCondition::Dirichlet;
-  p2d3.south_boundary_condition = poisson::BoundaryCondition::Adiabatic;
-  p2d3.west_boundary_condition = poisson::BoundaryCondition::Dirichlet;
-  p2d3.set_east([](double y) { return 1.0; });
-
-  std::vector<std::vector<double>> M43;
-  std::vector<double> b43;
-  std::vector<size_t> map43;
-
-  p2d3.matrix_system(M43, map43, b43);
-
-  REQUIRE(M43.size() == 6);
-  REQUIRE(map43.size() == 6);
-  REQUIRE(b43.size() == 6);
-
-  skyline.skip(2);
-  skyline.skip(3);
-
 }
-
-TEST_CASE("Case 5 - ADAD, Skyline w/ Skip Incremental 5x4", "[SymmetricSkipMatrix]")
-{
-  poisson::Poisson2D<size_t, double, std::vector> p2d(5, 4);
-  p2d.north_boundary_condition = poisson::BoundaryCondition::Adiabatic;
-  p2d.east_boundary_condition = poisson::BoundaryCondition::Dirichlet;
-  p2d.south_boundary_condition = poisson::BoundaryCondition::Adiabatic;
-  p2d.west_boundary_condition = poisson::BoundaryCondition::Dirichlet;
-  p2d.set_east([](double y) { return 1.0; });
-
-  std::vector<std::vector<double>> M;
-  std::vector<double> b;
-  std::vector<size_t> map;
-
-  p2d.matrix_system(M, map, b);
-
-  skyline::SymmetricMatrix<size_t, double, std::vector> skyline(M);
-
-  REQUIRE(skyline.heights().size() == 12);
-  CHECK(skyline.heights()[0] == 0);
-  CHECK(skyline.heights()[1] == 0);
-  CHECK(skyline.heights()[2] == 0);
-  CHECK(skyline.heights()[3] == 3);
-  CHECK(skyline.heights()[4] == 3);
-  CHECK(skyline.heights()[5] == 3);
-  CHECK(skyline.heights()[6] == 3);
-  CHECK(skyline.heights()[7] == 3);
-  CHECK(skyline.heights()[8] == 3);
-  CHECK(skyline.heights()[9] == 3);
-  CHECK(skyline.heights()[10] == 3);
-  CHECK(skyline.heights()[11] == 3);
-
-  REQUIRE(skyline.offsets().size() == 12);
-  CHECK(skyline.offsets()[0] == 0);
-  CHECK(skyline.offsets()[1] == 0);
-  CHECK(skyline.offsets()[2] == 0);
-  CHECK(skyline.offsets()[3] == 0);
-  CHECK(skyline.offsets()[4] == 3);
-  CHECK(skyline.offsets()[5] == 6);
-
-  std::vector<double> au{ {-1.0, 0.0, 0.0, -1.0, 0.0, -1.0, -1.0, 0.0, -1.0,
-    -1.0, 0.0, 0.0, -1.0, 0.0, -1.0, -1.0, 0.0, -1.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0 , -1.0, 0.0, 0.0 } };
-
-  REQUIRE(skyline.upper().size() == 27);
-  for (size_t i = 0; i < 8; ++i) {
-    CHECK(skyline.upper()[i] == au[i]);
-  }
-
-  std::vector<double> v(12);
-  jsl::UTDU<size_t, double, std::vector>(12, M, v);
-
-  skyline.utdu();
-  for (size_t i = 0; i < 12; i++) {
-    INFO("The index is " << i);
-    CHECK(skyline.diagonal()[i] == M[i][i]);
-  }
-  skyline.forward_substitution(b);
-  skyline.back_substitution(b);
-  jsl::map_vector<size_t, double, std::vector>(b, p2d.u, map);
-  for (size_t i = 0; i < 5; ++i) {
-    CHECK(p2d(i, 0) == Approx(p2d.x[i]));
-    CHECK(p2d(i, 1) == Approx(p2d.x[i]));
-    CHECK(p2d(i, 2) == Approx(p2d.x[i]));
-    CHECK(p2d(i, 3) == Approx(p2d.x[i]));
-  }
-
-}
-
-TEST_CASE("Case 5 - ADAD, Skyline w/ Skip Incremental 5x3", "[SymmetricMatrix]")
-{
-  poisson::Poisson2D<size_t, double, std::vector> p2d(5, 3);
-  p2d.north_boundary_condition = poisson::BoundaryCondition::Adiabatic;
-  p2d.east_boundary_condition = poisson::BoundaryCondition::Dirichlet;
-  p2d.south_boundary_condition = poisson::BoundaryCondition::Adiabatic;
-  p2d.west_boundary_condition = poisson::BoundaryCondition::Dirichlet;
-  p2d.set_east([](double y) { return 1.0; });
-
-  std::vector<std::vector<double>> M;
-  std::vector<double> b;
-  std::vector<size_t> map;
-
-  p2d.matrix_system(M, map, b);
-
-  skyline::SymmetricMatrix<size_t, double, std::vector> skyline(M);
-
-  REQUIRE(skyline.heights().size() == 9);
-  CHECK(skyline.heights()[0] == 0);
-  CHECK(skyline.heights()[1] == 0);
-  CHECK(skyline.heights()[2] == 0);
-  CHECK(skyline.heights()[3] == 3);
-  CHECK(skyline.heights()[4] == 3);
-  CHECK(skyline.heights()[5] == 3);
-  CHECK(skyline.heights()[6] == 3);
-  CHECK(skyline.heights()[7] == 3);
-  CHECK(skyline.heights()[8] == 3);
-
-  REQUIRE(skyline.offsets().size() == 9);
-  CHECK(skyline.offsets()[0] == 0);
-  CHECK(skyline.offsets()[1] == 0);
-  CHECK(skyline.offsets()[2] == 0);
-  CHECK(skyline.offsets()[3] == 0);
-  CHECK(skyline.offsets()[4] == 3);
-  CHECK(skyline.offsets()[5] == 6);
-  CHECK(skyline.offsets()[6] == 9);
-  CHECK(skyline.offsets()[7] == 12);
-  CHECK(skyline.offsets()[8] == 15);
-
-  std::vector<double> au{ {-1.0, 0.0, 0.0, -1.0, 0.0, -1.0, -1.0, 0.0, -1.0,
-    -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0} };
-
-  REQUIRE(skyline.upper().size() == 18);
-  for (size_t i = 0; i < 18; ++i) {
-    INFO("The index is " << i);
-    CHECK(skyline.upper()[i] == au[i]);
-  }
-
-  std::vector<double> v(9);
-  jsl::UTDU<size_t, double, std::vector>(9, M, v);
-
-  skyline.utdu();
-  for (size_t i = 0; i < 9; i++) {
-    INFO("The index is " << i);
-    CHECK(skyline.diagonal()[i] == M[i][i]);
-  }
-  skyline.forward_substitution(b);
-  skyline.back_substitution(b);
-  jsl::map_vector<size_t, double, std::vector>(b, p2d.u, map);
-  for (size_t i = 0; i < 5; ++i) {
-    CHECK(p2d(i, 0) == Approx(p2d.x[i]));
-    CHECK(p2d(i, 1) == Approx(p2d.x[i]));
-    CHECK(p2d(i, 2) == Approx(p2d.x[i]));
-  }
-
-}
-
-
