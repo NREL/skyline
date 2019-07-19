@@ -425,7 +425,7 @@ public:
       R value = 0.0;
       for (I i = this->m_im[m_ip[j]]; i < j; ++i) {
 #ifndef SKYLINE_MULTIPLE_ARRAY
-        value += this->m_am[this->m_n + m_ik[m_ip[j]] + i - this->m_im[m_ip[j]]] * this->m_v[m_ip[i]];  // OK, i >= m_im[j]
+        value += this->m_am[this->m_n + this->m_ik[m_ip[j]] + i - this->m_im[m_ip[j]]] * this->m_v[m_ip[i]];  // OK, i >= m_im[j]
 #else
         value += this->m_au[this->m_ik[m_ip[j]] + i - this->m_im[m_ip[j]]] * this->m_v[this->m_ip[i]];  // OK, i >= m_im[j]
 #endif
