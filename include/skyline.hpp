@@ -400,7 +400,7 @@ public:
     for (I k = 1; k < m_n_actual; ++k) {
       if (this->m_im[m_ip[k]] <= m_ip[0]) {
 #ifndef SKYLINE_MULTIPLE_ARRAY
-        I ij = m_n + this->m_ik[m_ip[k]];
+        I ij = this->m_n + this->m_ik[m_ip[k]];
         this->m_am[ij] /= this->m_am[0];
 #else
         I ij = this->m_ik[m_ip[k]];
@@ -416,7 +416,7 @@ public:
       }
       for (I i = this->m_im[m_ip[j]]; i < j; ++i) {
 #ifndef SKYLINE_MULTIPLE_ARRAY
-        this->m_v[m_ip[i]] = this->m_am[m_n + this->m_ik[m_ip[j]] + i - this->m_im[m_ip[j]]] * this->m_am[m_ip[i]]; // OK, i >= m_im[j]
+        this->m_v[m_ip[i]] = this->m_am[this->m_n + this->m_ik[m_ip[j]] + i - this->m_im[m_ip[j]]] * this->m_am[m_ip[i]]; // OK, i >= m_im[j]
 #else
         this->m_v[m_ip[i]] = this->m_au[this->m_ik[m_ip[j]] + i - this->m_im[m_ip[j]]] * this->m_ad[m_ip[i]]; // OK, i >= m_im[j]
 #endif
@@ -425,7 +425,7 @@ public:
       R value = 0.0;
       for (I i = this->m_im[m_ip[j]]; i < j; ++i) {
 #ifndef SKYLINE_MULTIPLE_ARRAY
-        value += m_am[m_n + m_ik[m_ip[j]] + i - m_im[m_ip[j]]] * m_v[m_ip[i]];  // OK, i >= m_im[j]
+        value += this->m_am[this->m_n + m_ik[m_ip[j]] + i - this->m_im[m_ip[j]]] * this->m_v[m_ip[i]];  // OK, i >= m_im[j]
 #else
         value += this->m_au[this->m_ik[m_ip[j]] + i - this->m_im[m_ip[j]]] * this->m_v[this->m_ip[i]];  // OK, i >= m_im[j]
 #endif
